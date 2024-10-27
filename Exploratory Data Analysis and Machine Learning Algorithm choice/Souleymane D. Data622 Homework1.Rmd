@@ -1,0 +1,513 @@
+---
+title: "Exploratory Analysis and Essay"
+author: "Souleymane Doumbia"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document:
+    toc: true
+    toc_depth: '3'
+  html_document: 
+    toc: true
+    toc_float: true
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Loading necessary libraries
+library(tidyverse)
+library(class)
+library(GGally)
+library(corrplot)
+```
+
+# Introduction
+
+In this report, we will perform exploratory data analysis (EDA) on two datasets. The first is the **NYC Taxi Trips Dataset**, a large dataset with over 1.4 million records, sourced from \textbf{\underline{\href{https://www.kaggle.com/datasets/atmarouane/nyc-taxi-trip-noisy?select=train_augmented.csv}{Kaggle}}}, which provides access to NYC taxi trip data. The second is a **Sales Dataset** with 10,000 records, obtained from \textbf{\underline{\href{https://excelbianalytics.com/wp/downloads-18-sample-csv-files-data-sets-for-testing-sales/}{excelbianalytics (10,000 Sales Records)}}}, designed for testing and analysis purposes. Our goal is to compare these datasets, explore their correlations, predictability, and assess the applicability of various machine learning algorithms.
+
+## Dataset Descriptions
+
+**NYC Taxi Trips Dataset:**
+
+- A large dataset containing NYC taxi trip data, sourced from \textbf{\underline{\href{https://www.kaggle.com/datasets/atmarouane/nyc-taxi-trip-noisy?select=train_augmented.csv}{Kaggle}}}. This dataset includes features such as trip distance, fare amount, trip duration, number of intersections, and the number of traffic signals encountered, among others.
+
+**Sales Dataset:**
+
+- A smaller dataset containing 10,000 sales transaction records, sourced from \textbf{\underline{\href{https://excelbianalytics.com/wp/downloads-18-sample-csv-files-data-sets-for-testing-sales/}{excelbianalytics (10,000 Sales Records)}}}. It includes features such as customer names, product categories, units sold, unit prices, total revenue, and total profit.
+
+This analysis will allow us to gain insights into the structure and complexity of both datasets and evaluate their suitability for machine learning applications.
+
+
+
+# I. Exploratory Data Analysis (EDA)
+
+## 1.1 Loading the Datasets
+```{r Loading_Datasets}
+# Load the small dataset (Sales Data)
+small_data <- read.csv("/Users/souleymanedoumbia/Library/Mobile Documents/com~apple~CloudDocs/CUNY SPS CLASSES/MSDS CLASSES/Data 622 Fall 2024/Week 8/Homework 1 _ Exploratory Data Analysis/10000 Sales Records.csv")
+
+# Load the large dataset (NYC Taxi Trips)
+large_data <- read.csv("/Users/souleymanedoumbia/Library/Mobile Documents/com~apple~CloudDocs/CUNY SPS CLASSES/MSDS CLASSES/Data 622 Fall 2024/Week 8/Homework 1 _ Exploratory Data Analysis/train_augmented.csv")
+```
+
+## 1.2 Initial Exploration and Data Summary
+
+The following code summarizes the sales data and provides a basic overview of the NYC taxi trip dataset.
+
+```{r summary_data}
+# Summary and structure of small dataset (Sales Data)
+summary(small_data)
+str(small_data)
+
+# Summary and structure of large dataset (NYC Taxi Trips)
+summary(large_data)
+str(large_data)
+```
+
+## 1.3 Check for Missing Values and Handle Them
+We’ll first check if there are missing values in the datasets and decide how to handle them.
+
+### 1.3.1 For the Sales Data
+```{r missing_sales_data}
+# Check for missing values in the Sales Data
+sum(is.na(small_data))
+
+# Identify columns with missing data
+colSums(is.na(small_data))
+
+# Handling missing values (if any)
+# we would remove rows with missing values for simplicity
+small_data_clean <- small_data %>%
+  drop_na()
+
+# Verify if missing values have been removed
+sum(is.na(small_data_clean))
+```
+
+### 1.3.2 For the NYC Taxi Trips Dataset
+```{r missing_taxi_data}
+# Check for missing values in the NYC Taxi Trips Dataset
+sum(is.na(large_data))
+
+# Identify columns with missing data
+colSums(is.na(large_data))
+
+# Handling missing values (if any)
+# we would remove rows with missing values for simplicity
+large_data_clean <- large_data %>%
+  drop_na()
+
+# Verify if missing values have been removed
+sum(is.na(large_data_clean))
+```
+
+## 1.4 Basic Statistics and Visualizations
+Once the data is cleaned, we can start with basic statistics and visualizing the distributions of key variables.
+
+### 1.4.1 For the Sales Data
+```{r sales_statistics}
+# Summary statistics for some key variables
+summary(small_data_clean[, c("Units.Sold", "Unit.Price", "Total.Revenue", "Total.Profit")])
+
+# Visualize distributions of the main predictors and target variables
+ggplot(small_data_clean, aes(x = Units.Sold)) +
+  geom_histogram(binwidth = 500, fill = "blue", color = "white") +
+  ggtitle("Distribution of Units Sold")
+
+ggplot(small_data_clean, aes(x = Unit.Price)) +
+  geom_histogram(binwidth = 10, fill = "orange", color = "white") +
+  ggtitle("Distribution of Unit Price")
+
+ggplot(small_data_clean, aes(x = Total.Revenue)) +
+  geom_histogram(binwidth = 50000, fill = "green", color = "white") +
+  ggtitle("Distribution of Total Revenue")
+
+ggplot(small_data_clean, aes(x = Total.Profit)) +
+  geom_histogram(binwidth = 50000, fill = "purple", color = "white") +
+  ggtitle("Distribution of Total Profit")
+```
+#### 1.4.1.1 Summary Statistics: Sales Data
+The summary statistics for key variables in the Sales Data dataset reveal patterns and distribution characteristics:
+
+- **Units Sold**:
+  - Min: 2, Max: 10,000
+  - 1st Quartile: 2,531, Median: 4,962, Mean: 5,003, 3rd Quartile: 7,472
+  - Distribution appears uniform across values, suggesting steady sales volumes without extreme peaks or dips.
+
+- **Unit Price**:
+  - Min: 9.33, Max: 668.27
+  - 1st Quartile: 109.28, Median: 205.70, Mean: 268.14, 3rd Quartile: 437.20
+  - Displays a multimodal distribution, likely indicating multiple product categories or pricing segments.
+
+- **Total Revenue**:
+  - Min: 168, Max: 6,680,027
+  - 1st Quartile: 288,551, Median: 800,051, Mean: 1,333,355, 3rd Quartile: 1,819,143
+  - Right-skewed distribution, with most transactions having lower revenue and a few with high revenue, creating a long tail.
+
+- **Total Profit**:
+  - Min: 43.4, Max: 1,738,178.4
+  - 1st Quartile: 98,329.1, Median: 289,099.0, Mean: 395,089.3, 3rd Quartile: 566,422.7
+  - Similar to Total Revenue, showing right-skewness due to high-profit outliers. Indicates that a few transactions contribute significantly to profit.
+
+#### 1.4.1.2 Visualizations and Observations: Sales Data Distribution
+- **Units Sold** shows a fairly uniform distribution, reflecting consistent sales volume.
+
+- **Total Revenue** and **Total Profit** distributions are right-skewed, pointing to a few high-value transactions.
+
+- The multimodal distribution of **Unit Price** suggests different price categories, possibly for varied product lines.
+
+These observations emphasize the relevance of focusing on **Total Revenue** and **Total Profit** for profitability analysis, given their variability and significant impact within the dataset.
+
+
+### 1.4.2 For the NYC Taxi Trips Dataset
+```{r taxi_statistics}
+# Summary statistics for some key variables 
+summary(large_data_clean[, c("distance", "duration", "nIntersection", "nTrafficSignals")])
+
+# Visualize distributions of the main predictors and target variable
+ggplot(large_data_clean, aes(x = distance)) +
+  geom_histogram(binwidth = 500, fill = "purple", color = "white") +
+  ggtitle("Distribution of Trip Distance")
+
+ggplot(large_data_clean, aes(x = duration)) +
+  geom_histogram(binwidth = 50, fill = "red", color = "white") +
+  ggtitle("Distribution of Trip Duration")
+
+ggplot(large_data_clean, aes(x = nIntersection)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "white") +
+  ggtitle("Distribution of Number of Intersections")
+
+ggplot(large_data_clean, aes(x = nTrafficSignals)) +
+  geom_histogram(binwidth = 1, fill = "green", color = "white") +
+  ggtitle("Distribution of Number of Traffic Signals")
+```
+
+#### 1.4.2.1 Summary Statistics: NYC Taxi Data
+
+- **Trip Distance:**
+  - The distribution of `distance` is highly skewed, with the majority of trips covering short distances (median: 2721). 
+  - There is a long tail, indicating a few trips with significantly larger distances, up to a maximum of 52,309.
+  
+- **Trip Duration:**
+  - The `duration` distribution is also right-skewed, with most trips being relatively short (median: 248.5 seconds).
+  - A few outliers have much longer durations, extending up to 2725.1 seconds.
+  
+- **Number of Intersections (`nIntersection`):**
+  - This variable is concentrated at the lower end of the scale (mean: 2.5), indicating that most trips encounter only a few intersections.
+  - Some trips pass through as many as 99 intersections, adding variability.
+  
+- **Number of Traffic Signals (`nTrafficSignals`):**
+  - The `nTrafficSignals` distribution follows a skewed pattern, with a mean of 24.53.
+  - Most trips pass through fewer than 32 signals, with a small number of trips encountering up to 112 signals.
+
+
+#### 1.4.2.2 Interpretation: Distribution in NYC Taxi Data
+
+- The skewed distributions in both `distance` and `duration` suggest variability in trip lengths, likely due to urban vs. suburban trip characteristics.
+
+- High variability in intersections and traffic signals aligns with different traffic conditions across routes, highlighting the importance of these features in the model.
+
+- This analysis supports the selection of features such as `distance`, `duration`, `nIntersection`, and `nTrafficSignals` as predictive variables for modeling trip characteristics.
+
+
+
+
+## 1.5 Correlation Analysis
+### 1.5.1 For the Sales Data
+```{r sales_data_correlation}
+# Correlation matrix for numeric variables in Sales Data
+sales_data_numeric <- small_data_clean %>% select_if(is.numeric)
+
+# Calculate and plot the correlation matrix
+sales_corr_matrix <- cor(sales_data_numeric, use = "complete.obs")
+corrplot::corrplot(sales_corr_matrix, method = "circle", type = "upper", 
+                   addCoef.col = "black", tl.col = "black", tl.srt = 45, 
+                   title = "Sales Data: Correlation Heatmap (All Numeric Variables)", mar = c(0, 0, 1, 0))
+```
+
+- *Correlation Analysis: Sales Data*
+  - **Total Revenue** is highly correlated with both **Units Sold** and **Unit Price**. This is intuitive since revenue is directly impacted by the number of units sold and their price.
+  - **Total Cost** is also strongly correlated with **Total Revenue**, which is expected since costs increase with the number of units sold.
+  - **Total Profit** is positively correlated with **Total Revenue** and **Units Sold**, as higher revenue typically leads to higher profit.
+
+
+### 1.5.2 For the NYC Taxi Trips Dataset
+```{r taxi_data_correlation}
+# Correlation matrix for numeric variables in NYC Taxi Data
+taxi_data_numeric <- large_data_clean %>% select_if(is.numeric)
+
+# Calculate and plot the correlation matrix
+taxi_corr_matrix <- cor(taxi_data_numeric, use = "complete.obs")
+
+# Plot correlation heatmap with smaller text for coefficients
+corrplot::corrplot(taxi_corr_matrix, method = "circle", type = "upper", 
+                   addCoef.col = "black", tl.col = "black", tl.srt = 45, 
+                   number.cex = 0.4, # By adjusting this value we can to resize the coef. text in the circle
+                   title = "NYC Taxi Data: Correlation Heatmap (All Numeric Variables)", 
+                   mar = c(0, 0, 1, 0))
+```
+
+- *Correlation Analysis: Taxi Trips Dataset*
+  - There is a strong positive correlation between **Distance** and **Duration**. Longer trips naturally tend to have longer durations.
+  - **nIntersection** has a moderate positive correlation with **Duration** and **Distance**, which makes sense as more intersections might indicate a more urban, congested trip.
+  - Some variables, like **nTrafficSignals** and **nCrossing**, show weak correlations with **Distance** and **Duration**, suggesting that traffic-related features might not have a significant impact on trip length in this dataset.
+
+
+## 1.6 Moving on to Machine Learning Algorithms
+
+   - Now that we have a clear understanding of the data, let’s move on to applying machine learning algorithms.
+   - Based on our earlier discussion, we will proceed with **Linear Regression** for continuous variables and **K-Nearest Neighbors (KNN)** for more complex, non-linear relationships.
+   
+
+# II. Applying Machine Learning Algorithms
+
+## 2.1 Linear Regression on Sales Data
+We can use **Linear Regression** to predict **Total Profit** based on variables like **Units Sold**, **Total Revenue**, and **Unit Price**.
+
+```{r linear_regress_sales_data}
+# Linear Regression on Sales Data
+lm_model_sales <- lm(Total.Profit ~ Units.Sold + Unit.Price + Total.Revenue, data = small_data_clean)
+
+# Summary of the model
+summary(lm_model_sales)
+```
+
+\section*{Interpretation of Linear Regression Model Output for Sales Data}
+
+- **Model Summary**:
+  - *Intercept*: The estimated intercept is 678.6, suggesting that if all predictor variables (**Units Sold**, **Unit Price**, and **Total Revenue**) were zero, the baseline starting point for **Total Profit** would theoretically be 678.6. 
+  - **Coefficients**:
+    - **Units Sold**: The coefficient of 25.10 indicates that for each additional unit sold, the **Total Profit** increases by approximately 25.10 units, assuming all other factors remain constant.
+    - **Unit Price**: The coefficient of -1.763 suggests that each additional unit increase in **Unit Price** slightly decreases the **Total Profit** by 1.763 units, holding other variables constant. However, this relationship is not statistically significant, as indicated by its high p-value (0.908).
+    - **Total Revenue**: The coefficient of 0.202 implies that for each additional unit of revenue, the **Total Profit** increases by 0.202 units, assuming other factors remain constant.
+
+- **Statistical Significance**:
+  - The predictors **Units Sold** and **Total Revenue** are highly statistically significant, with p-values of less than 0.001, indicated by the \(***\) significance codes. This suggests a strong relationship between these variables and **Total Profit**.
+  - **Unit Price** does not significantly affect **Total Profit** (p-value = 0.908), indicating it may not be a useful predictor in this model.
+
+- **Model Fit**:
+  - *R-squared*: The Multiple R-squared of 0.8048 indicates that approximately 80.48\% of the variance in **Total Profit** is explained by the model, suggesting a good fit.
+  - *Residual Standard Error*: The residual standard error of 166,800 reflects the average deviation of predictions from actual values in the data, indicating the model’s prediction error.
+
+- **F-statistic**: The high F-statistic value (1.374e+04) with a p-value of \(< 2.2e-16\) indicates that the model as a whole is statistically significant.
+
+- The model demonstrates that **Units Sold** and **Total Revenue** are strong predictors of **Total Profit**, while **Unit Price** has limited predictive power in this context.
+
+
+
+
+## 2.2 K-Nearest Neighbors (KNN) on NYC Taxi Data
+For the NYC Taxi Data, we can use **KNN** to predict **Trip Duration** based on features like **Distance***, **nIntersection**, and **nTrafficSignals**.
+
+### 2.2.1 K-Nearest Neighbors (KNN) Modeling on NYC Taxi Data - "too many ties in knn" issues
+In this section, we encountered an error while attempting to apply the K-Nearest Neighbors (KNN) algorithm to predict the **Trip Duration** from features like **Distance**, **nIntersection**, and **nTrafficSignals**. The error we encountered was: \texttt{"too many ties in knn"}. Below is the initial code used, which led to this issue:
+```{r 2_2_1}
+### KNN Code Leading to "too many ties in knn" issues
+
+# Prepare data (scale features)
+scaled_data <- scale(large_data_clean[, c("distance", "nIntersection", "nTrafficSignals")])
+
+# Create training and testing datasets
+set.seed(123)
+train_indices <- sample(1:nrow(scaled_data), size = 0.8 * nrow(scaled_data))
+train_data <- scaled_data[train_indices, ]
+train_labels <- large_data_clean$duration[train_indices]
+test_data <- scaled_data[-train_indices, ]
+test_labels <- large_data_clean$duration[-train_indices]
+
+## Running KNN = Leading to "too many ties in knn" Error
+#k_value <- 7
+#knn_model <- knn(train = train_data, test = test_data, cl = train_labels, k = k_value, use.all = FALSE)
+
+# Evaluate the model
+#table(predicted = knn_model, actual = test_labels)
+```
+
+- **Why the Code above is Not Working:**
+  - The error "too many ties in knn" occurred because many data points in the dataset had identical or very similar feature values.
+  - KNN calculates the distance between data points to determine the closest neighbors. When multiple points have the same or very close distances to the target, the algorithm cannot resolve the ties, leading to the error.
+  - In this case, features like **distance**, **nIntersection**, and **nTrafficSignals** in the taxi dataset likely had limited variation, especially in urban trips where trips may have similar characteristics.
+  - The result was multiple data points with the same or very similar distances, which caused the algorithm to fail.
+
+### 2.2.2 Updated K-Nearest Neighbors (KNN) Modeling on NYC Taxi Data
+- **Solution: Adding Small Random Noise to Break Ties:**
+  - To overcome this issue in the previous approach, we introduced **slight random noise** to the features after scaling.
+  - This technique, known as adding noise, ensures that no two data points are exactly the same by adding a tiny random value to each feature.
+  - The noise is small enough (mean = 0, sd = 0.0001) that it does not alter the meaning of the data but helps the KNN algorithm by breaking ties in the distance calculation.
+```{r 2_2_2}
+# Sample a subset of the data
+set.seed(123)
+subset_indices <- sample(1:nrow(large_data_clean), size = 500000)
+large_data_sample <- large_data_clean[subset_indices, ]
+
+# Scale features
+scaled_data <- scale(large_data_sample[, c("distance", "nIntersection", "nTrafficSignals")])
+
+# Split into training and testing datasets
+set.seed(123)
+train_indices <- sample(1:nrow(scaled_data), size = 0.8 * nrow(scaled_data))
+train_data <- scaled_data[train_indices, ]
+train_labels <- large_data_sample$duration[train_indices]
+test_data <- scaled_data[-train_indices, ]
+test_labels <- large_data_sample$duration[-train_indices]
+
+# Add random noise to break ties
+train_data_noisy <- train_data + matrix(rnorm(n = nrow(train_data) * ncol(train_data), mean = 0, sd = 0.0001), nrow = nrow(train_data))
+test_data_noisy <- test_data + matrix(rnorm(n = nrow(test_data) * ncol(test_data), mean = 0, sd = 0.0001), nrow = nrow(test_data))
+
+# Run KNN with noisy data
+k_value <- 7
+knn_model_noisy <- knn(train = train_data_noisy, test = test_data_noisy, cl = train_labels, k = k_value, use.all = FALSE)
+```
+
+- **Why This Approach Works:**
+  - The slight random noise introduced in the features ensures that no two data points have identical values, breaking the ties that were previously causing the algorithm to fail.
+  - **Distance Calculation**: KNN relies on calculating the distance between data points. Without noise, multiple data points could be exactly the same in their feature values, leading to tied distances and confusion in the algorithm.
+  - **Impact of Noise**: The noise added (mean = 0, sd = 0.0001) is so small that it does not distort the meaning of the data. For example, if a feature like **distance** is originally 10, adding noise might change it to 10.0001, which is imperceptible but enough to break a tie when calculating distances between points.
+  - This approach ensures that the KNN algorithm can function correctly by always finding the nearest neighbors without running into tie issues.
+  - I initially chose to work with a sample of the data to reduce computational load and speed up the model testing process, allowing for quicker iterations and evaluations before scaling the model to the entire dataset.
+  
+```{r knn_accuracy}
+# Calculate accuracy
+accuracy <- sum(knn_model_noisy == test_labels) / length(test_labels)
+accuracy
+```
+
+
+- **0.68\% Accuracy (0.00679):**
+  - *Very Low*: An accuracy of 0.68\% suggests that the K-Nearest Neighbors (KNN) model is performing poorly, correctly predicting only a very small fraction of the time.
+  - *Likely Issue*: This low accuracy may stem from the high dimensionality of the feature space or the insufficient separation of data points using KNN’s distance-based approach.
+
+- **Need for a New Model**:
+  - Given the low accuracy observed with K-Nearest Neighbors (KNN) on the NYC Taxi data, it’s sensible to consider **Linear Regression** as an alternative model. Linear Regression is particularly effective when dealing with continuous outcome variables like **Trip Duration**, as it assumes a linear relationship between the predictors (such as **Distance**, **nIntersection**, and **nTrafficSignals**) and the target. This model is less computationally intensive than KNN, making it more suitable for large datasets, especially when the relationships in the data can be adequately captured by a linear combination of features. Additionally, Linear Regression has shown strong performance in our analysis of the Sales Data, making it a promising approach to test with the NYC Taxi data.
+  
+  
+## 2.3 Linear Regression for NYC Taxi Data
+```{r LinearRegression_TaxiData}
+# Fit Linear Regression model on the NYC Taxi data
+linear_model <- lm(duration ~ distance + nIntersection + nTrafficSignals, data = large_data_clean)
+
+# View the summary of the model
+summary(linear_model)
+
+# Predict on the dataset
+predicted_duration <- predict(linear_model, large_data_clean)
+
+# Calculate RMSE to evaluate model performance
+actual_duration <- large_data_clean$duration
+rmse <- sqrt(mean((predicted_duration - actual_duration)^2))
+rmse
+```
+
+- **Model Summary**:
+  - *Intercept*: The estimated intercept is 16.48, suggesting that when all predictor values are zero, the trip duration would start from this baseline.
+  - *Coefficients*:
+    - **Distance**: The coefficient of 0.05128 indicates that for each additional unit increase in distance, the trip duration increases by approximately 0.051 units, holding other variables constant.
+    - **nIntersection**: The coefficient of 2.530 suggests that each additional intersection contributes approximately 2.53 units to the trip duration, holding other variables constant.
+    - **nTrafficSignals**: Each additional traffic signal adds approximately 3.537 units to the trip duration.
+
+
+- **Statistical Significance**:
+  - All predictors are statistically significant at the \(p < 0.001\) level, as shown by the \(***\) significance codes, indicating a strong relationship between these variables and trip duration.
+
+
+- **Model Fit**:
+  - *R-squared*: The Multiple R-squared of 0.9848 indicates that approximately 98.48\% of the variance in trip duration is explained by the model, suggesting an excellent fit.
+  - *Residual Standard Error*: The residual standard error of 35.38 reflects the average amount by which the predictions differ from the actual trip durations. While small, this still indicates some variation that the model does not capture.
+
+
+- **F-statistic**: The very high F-statistic value (3.126e+07) with a p-value of \(< 2.2e-16\) indicates that the model, as a whole, is statistically significant.
+
+With this strong performance, Linear Regression appears well-suited for predicting trip duration in the NYC Taxi data.
+
+
+## 2.4 Algorithm Selection Rationale
+
+- **Linear Regression**:
+  - We selected Linear Regression for both the **Sales Data** and the **NYC Taxi Data** due to the continuous nature of the target variables (**Total Profit** in the Sales Data and **Trip Duration** in the NYC Taxi Data). Linear Regression is ideal when there is a linear relationship between the predictors and the target variable. 
+  - In the Sales Data, **Total Profit** likely has a direct relationship with variables like **Units Sold** and **Total Revenue**, which justifies using Linear Regression.
+  - Similarly, in the NYC Taxi Data, **Trip Duration** might be linearly affected by factors like **Distance**, **nIntersection**, and **nTrafficSignals**, making Linear Regression a strong candidate for capturing these relationships.
+
+
+- **K-Nearest Neighbors (KNN)**:
+  - K-Nearest Neighbors was initially chosen for the NYC Taxi Data to test its ability to capture any non-linear relationships among the features, which could be relevant in predicting trip duration in varied traffic and route conditions.
+  - KNN is a non-parametric algorithm, which can be beneficial when data relationships are not strictly linear. However, we encountered limitations with KNN due to high computational costs and low accuracy, prompting a switch to Linear Regression for better performance.
+
+
+## 2.5 Model Limitations
+
+- **Linearity Assumption**:
+  - Linear Regression assumes a linear relationship between predictors and the target variable. In the case of the NYC Taxi Data, this model may not fully capture the complexity of factors affecting **Trip Duration**. For instance, the effects of **distance**, **intersections**, and **traffic signals** may not be entirely linear in real-world conditions, where variations in traffic or road conditions can impact trip duration non-linearly.
+
+
+- **Sensitivity to Outliers**:
+  - Linear Regression is sensitive to outliers, which can distort predictions and reduce model accuracy. In both datasets, unusually high or low values in **Units Sold** or **Trip Duration** can disproportionately influence the model. For the NYC Taxi Data, trips with very high durations or distances may not align well with typical travel patterns, affecting the model’s overall predictive accuracy.
+
+
+- **Limitations of K-Nearest Neighbors (KNN)**:
+  - KNN, which was initially considered for the NYC Taxi Data, encountered computational limitations and performed poorly, especially due to its high reliance on calculating distances in high-dimensional spaces. This challenge, coupled with low accuracy, prompted a switch to Linear Regression.
+
+
+- **Potential for Non-Linear Models**:
+  - While Linear Regression provides interpretable and computationally efficient results, exploring non-linear models (e.g., Decision Trees or Random Forests) could capture more complex relationships within the data, especially in the NYC Taxi Data where non-linear interactions among **distance** and **traffic features** may exist.
+
+
+- Despite these limitations, Linear Regression proved effective for both datasets, particularly in explaining **Total Profit** in the Sales Data. Future analyses could incorporate non-linear models to potentially improve predictive performance and capture more complex patterns in the NYC Taxi Data.
+
+
+
+# III. Comparison of Model Performance and Dataset Size Impact
+
+## 3.1 Evaluate Performance with Metrics
+
+- **Sales Data**:
+  - For the Sales Data model, we observed an *R² of 80.48%*, meaning that **Units Sold** and **Total Revenue** explained around 80\% of the variance in **Total Profit**. The *Residual Standard Error* (166,800) reflects a relatively high degree of variability in predictions, indicating that while the model fit is strong, additional features could improve predictive power.
+  - *Impact of Size on Metrics*: The smaller size of the Sales Data provided a manageable dataset for efficient model fitting. However, the limited sample size and feature set constrained the model’s explanatory power, resulting in a lower R² compared to the larger dataset.
+
+
+- **NYC Taxi Data**:
+  - For the NYC Taxi Data, the model achieved an *R² of 98.48\%* with a *Residual Standard Error* of 35.38, showing an exceptionally good fit. This high R² suggests that **Distance**, **nIntersection**, and **nTrafficSignals** accounted for nearly all variance in **Trip Duration**. The large dataset size contributed to this high accuracy by allowing the model to capture subtle patterns and relationships.
+  - *Impact of Size on Metrics*: The large sample size led to a much higher R², as the abundance of data enabled the model to generalize more effectively. The rich dataset likely allowed Linear Regression to capture nuanced relationships, resulting in a more precise model with lower residual error compared to the smaller Sales Data.
+
+
+## 3.2 Comparing Computational Time and Efficiency
+
+- **Large Dataset (NYC Taxi Data)**:
+  - The NYC Taxi Data’s size posed significant computational challenges, especially with K-Nearest Neighbors (KNN), which was computationally expensive and low-performing, achieving an accuracy of just 0.68\%. This prompted a shift to Linear Regression, which was computationally faster and more compatible with large datasets.
+  - While Linear Regression processed the larger dataset with relatively good efficiency, the model fitting and prediction times were naturally longer than with the smaller Sales Data.
+
+
+- **Small Dataset (Sales Data)**:
+  - The smaller dataset size allowed for quick computation with Linear Regression, providing efficient and manageable processing times. However, the smaller data volume meant that the model may not have captured all nuances, as reflected by the lower R².
+
+
+## 3.3 Challenges and Conclusion
+
+- **Comparative Impact of Dataset Size**:
+  - The large dataset size in the NYC Taxi Data facilitated a high R² and precise model, likely due to more comprehensive data coverage. Conversely, while the Sales Data model fit well, the smaller sample size limited its predictive capability.
+  
+  
+- **Practical Implications**:
+  - The NYC Taxi Data’s larger size allowed for more robust predictions but required processing adaptations to balance computational demands with model effectiveness. The Sales Data model provided quick insights with efficient computation, but adding more data or features could enhance its predictive power.
+
+
+# IV. Final Conclusion and Recommendations}
+
+## 4.1 Conclusion:
+  - This project aimed to explore and analyze two datasets, the **Sales Data** and the **NYC Taxi Data**, using Linear Regression as the primary modeling approach.
+  - For the **Sales Data**, Linear Regression performed well, with an *R² of 80.48\%*, indicating that **Units Sold** and **Total Revenue** are strong predictors of **Total Profit**. The model, however, showed a relatively high Residual Standard Error (RSE is 166,800), partly due to outliers in Total Profit.
+  - In the **NYC Taxi Data**, Linear Regression achieved an *R² of 98.48\%*, suggesting that **Distance**, **nIntersection**, and **nTrafficSignals** together explained nearly all the variation in **Trip Duration**. The large dataset size contributed to this high R², though it required careful handling to manage computational demands.
+
+## 4.2 Recommendations for Future Analysis:
+  - **Explore Non-Linear Models**: For the NYC Taxi Data, future work could benefit from testing non-linear models, such as Decision Trees or Random Forests, to potentially capture any complex interactions among predictors.
+  - **Additional Features**: In the Sales Data, adding more features related to pricing, regional factors, or customer segments could provide further insights and potentially improve model performance by reducing unexplained variance.
+  - **Outlier Handling**: To improve RSE and overall model stability, consider handling outliers in Total Profit through capping extreme values or using robust regression methods, especially for business decisions that prioritize consistency.
+
+## 4.3 Practical Applications:
+  - **Sales Data**: Insights from the Sales Data model can help businesses understand profitability drivers. For example, identifying how **Units Sold** and **Total Revenue** influence **Total Profit** can aid in decision-making for sales strategies and resource allocation.
+  - **NYC Taxi Data**: The high R² in the NYC Taxi Data model suggests that distance and traffic-related factors are critical to predicting trip duration, which can help improve route planning and time estimations, benefiting both operational efficiency and customer satisfaction.
+
+In summary, Linear Regression proved effective for both datasets, providing interpretable and useful insights. While the current analysis is informative, further exploration with additional features and advanced models could yield even more accurate predictions, especially for datasets with complex relationships or outliers.
+
+* * *
